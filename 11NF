@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boleta Escolar CECyTEC 302 - Ejecución en Vivo</title>
+    <!-- Pico.css vía CDN para diseño adaptativo sin consumir memoria -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        .aprobado { color: #2b8a3e; font-weight: bold; }
+        .reprobado { color: #c92a2a; font-weight: bold; }
+        .badge-cloud { background-color: #006341; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
+    </style>
+</head>
+<body class="container" style="padding-top: 20px;">
+    
+    <header>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>CECyTEC Plantel 5 - Boleta Escolar</h2>
+            <span class="badge-cloud">⚡ En línea (GitHub Pages)</span>
+        </div>
+        <p><small>Asignatura: Emplea Frameworks | Docente: Ing. Humberto G. Aguilera Esparza | Grupo 302</small></p>
+        <hr>
+    </header>
+
+    <main>
+        <!-- Formulario de Captura -->
+        <section>
+            <h3>Registrar Alumno y Calificaciones</h3>
+            <form id="formularioBoleta">
+                <div class="grid">
+                    <div>
+                        <label for="nombre">Nombre Completo del Alumno:</label>
+                        <input type="text" id="nombre" name="nombre" required placeholder="Ej. Carlos Mendoza">
+                    </div>
+                    <div>
+                        <label for="p1">Parcial 1 (0.0 - 10.0):</label>
+                        <input type="number" step="0.1" min="0" max="10" id="p1" name="p1" required placeholder="0.0">
+                    </div>
+                </div>
+                <div class="grid">
+                    <div>
+                        <label for="p2">Parcial 2 (0.0 - 10.0):</label>
+                        <input type="number" step="0.1" min="0" max="10" id="p2" name="p2" required placeholder="0.0">
+                    </div>
+                    <div>
+                        <label for="p3">Parcial 3 (0.0 - 10.0):</label>
+                        <input type="number" step="0.1" min="0" max="10" id="p3" name="p3" required placeholder="0.0">
+                    </div>
+                </div>
+                <button type="submit" style="background-color: #006341; border: none;">Guardar y Procesar Registro</button>
+            </form>
+        </section>
+
+        <!-- Matriz de Resultados -->
+        <section style="margin-top: 30px;">
+            <h3>Boleta Digital de Calificaciones (Persistencia Web)</h3>
+            <figure>
+                <table role="grid">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Alumno</th>
+                            <th>P1</th>
+                            <th>P2</th>
+                            <th>P3</th>
+                            <th>Promedio</th>
+                            <th>Estatus Académico</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaResultados">
+                        <!-- Carga dinámica mediante JavaScript -->
+                    </tbody>
+                </table>
+            </figure>
+        </section>
+    </main>
+
+    <script>
+        // Lógica de Persistencia y Procesamiento Client-Side
+        document.addEventListener('DOMContentLoaded', cargarAlumnos);
+
+        const formulario = document.getElementById('formularioBoleta');
+        formulario.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const nombre = document.getElementById('nombre').value.trim();
+            const p1 = parseFloat(document.getElementById('p1').value) || 0.0;
+            const p2 = parseFloat(document.getElementById('p2').value) || 0.0;
+            const p3 = parseFloat(document.getElementById('p3').value) || 0.0;
+
+            const promedio = (p1 + p2 + p3) / 3.0;
+            const estatus = promedio >= 6.0 ? 'APROBADO' : 'REPROBADO';
+
+            const nuevoAlumno = {
+                id: Date.now(),
+                nombre: nombre,
+                p1: p1.toFixed(1),
+                p2: p2.toFixed(1),
+                p3: p3.toFixed(1),
+                promedio: promedio.toFixed(1),
+                estatus: estatus
+            };
+
+            let listaAlumnos = JSON.parse(localStorage.getItem('cecytec_alumnos')) || [];
+            listaAlumnos.push(nuevoAlumno);
+            localStorage.setItem('cecytec_alumnos', JSON.stringify(listaAlumnos));
+
+            formulario.reset();
+            cargarAlumnos();
+        });
+
+        function cargarAlumnos() {
+            const tabla = document.getElementById('tablaResultados');
+            tabla.innerHTML = '';
+            const listaAlumnos = JSON.parse(localStorage.getItem('cecytec_alumnos')) || [];
+
+            if (listaAlumnos.length === 0) {
+                tabla.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay alumnos registrados en esta boleta cloud.</td></tr>';
+                return;
+            }
+
+            listaAlumnos.forEach((a, index) => {
+                const claseEstatus = a.estatus === 'APROBADO' ? 'aprobado' : 'reprobado';
+                const fila = `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${a.nombre}</strong></td>
+                        <td>${a.p1}</td>
+                        <td>${a.p2}</td>
+                        <td>${a.p3}</td>
+                        <td><strong>${a.promedio}</strong></td>
+                        <td><span class="${claseEstatus}">${a.estatus}</span></td>
+                        <td><button onclick="eliminarAlumno(${a.id})" class="outline secondary" style="padding: 2px 8px; font-size: 0.75rem;">Borrar</button></td>
+                    </tr>
+                `;
+                tabla.innerHTML += fila;
+            });
+        }
+
+        function eliminarAlumno(id) {
+            let listaAlumnos = JSON.parse(localStorage.getItem('cecytec_alumnos')) || [];
+            listaAlumnos = listaAlumnos.filter(a => a.id !== id);
+            localStorage.setItem('cecytec_alumnos', JSON.stringify(listaAlumnos));
+            cargarAlumnos();
+        }
+    </script>
+</body>
+</html>
